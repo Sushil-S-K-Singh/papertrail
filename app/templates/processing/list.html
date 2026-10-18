@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Processing Jobs{% endblock %}
+
+{% block content %}
+<div class="processing-page">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+        Document Processing Jobs
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.925rem;">
+        Automated content metrics, cryptographic checksums, compliance scans, and redaction masks.
+      </p>
+    </div>
+  </div>
+
+  <!-- Launch New Job Card -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+      <h2 class="card-title" style="font-size: 1.1rem;">⚡ Dispatch Processing Job</h2>
+    </div>
+    <div class="card-body">
+      {% if available_docs %}
+        <form action="{{ url_for('processing.create_job') }}" method="POST" style="display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 1rem; align-items: flex-end;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="document_id" class="form-label">Target Document</label>
+            <select id="document_id" name="document_id" class="form-select" required>
+              {% for d in available_docs %}
+                <option value="{{ d.id }}">#{{ d.id }} — {{ d.title }} ({{ d.category }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="job_type" class="form-label">Analysis Task</label>
+            <select id="job_type" name="job_type" class="form-select" required>
+              {% for key, label in job_types.items() %}
+                <option value="{{ key }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              Execute Job
+            </button>
+          </div>
+        </form>
+      {% else %}
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          No documents available to process. Please create or submit a document first.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Jobs List Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Job Execution History</h2>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">{{ jobs|length }} total tasks executed</span>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+      {% if jobs %}
+        <div class="table-responsive" style="border: none; border-radius: 0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Job ID</th>
+                <th>Target Document</th>
+                <th>Task Type</th>
+                <th>Requester</th>
+                <th>Status</th>
+                <th>Executed At</th>
+                <th style="text-align: right;">Results</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in jobs %}
+                <tr>
+                  <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">#{{ job.id }}</td>
+                  <td>
+                    {% if job.document %}
+                      <a href="{{ url_for('documents.view_document', id=job.document.id) }}" style="font-weight: 600;">
+                        {{ job.document.title }}
+                      </a>
+                    {% else %}
+                      <span style="color: var(--text-muted);">Document deleted</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge" style="background: #eff6ff; color: #1e40af; border-color: #bfdbfe;">
+                      {{ job_types.get(job.job_type, job.job_type) }}
+                    </span>
+                  </td>
+                  <td>{{ job.requester.username }}</td>
+                  <td>
+                    {% if job.status == 'completed' %}
+                      <span class="badge badge-approved">Completed</span>
+                    {% elif job.status == 'failed' %}
+                      <span class="badge badge-rejected">Failed</span>
+                    {% else %}
+                      <span class="badge badge-pending">{{ job.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size: 0.8rem; color: var(--text-muted);">
+                    {{ job.completed_at.strftime('%Y-%m-%d %H:%M:%S') if job.completed_at else job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                  </td>
+                  <td style="text-align: right;">
+                    <a href="{{ url_for('processing.view_job', id=job.id) }}" class="btn btn-secondary btn-sm">
+                      View Payload
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">⚙️</div>
+          <h3 class="empty-state-title">No processing jobs yet</h3>
+          <p class="empty-state-description">Launch your first document analysis, compliance audit, or cryptographic checksum above.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Processing Job #{{ job.id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('processing.list_jobs') }}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Processing Jobs</a>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+          Processing Job #{{ job.id }}
+        </h1>
+        {% if job.status == 'completed' %}
+          <span class="badge badge-approved">Completed</span>
+        {% elif job.status == 'failed' %}
+          <span class="badge badge-rejected">Failed</span>
+        {% else %}
+          <span class="badge badge-pending">{{ job.status }}</span>
+        {% endif %}
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Type: <strong>{{ job_type_label }}</strong> &bull;
+        Target:
+        {% if job.document %}
+          <a href="{{ url_for('documents.view_document', id=job.document.id) }}"><strong>{{ job.document.title }}</strong></a>
+        {% else %}
+          <em>Deleted document</em>
+        {% endif %}
+        &bull; Requested by: <strong>{{ job.requester.username }}</strong>
+      </p>
+    </div>
+
+    <div>
+      {% if job.document %}
+        <a href="{{ url_for('documents.view_document', id=job.document.id) }}" class="btn btn-secondary">
+          Inspect Document
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Key Metrics Summary Cards if available -->
+  {% set res = job.result_data %}
+  {% if job.status == 'completed' and res %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      {% if res.word_count is defined %}
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">TOTAL WORDS</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">{{ res.word_count }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">READABILITY GRADE</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #047857;">Grade {{ res.readability_index }}</div>
+        </div>
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">READING TIME</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #b45309;">~{{ res.estimated_reading_time_min }} min</div>
+        </div>
+      {% elif res.sha256 is defined %}
+        <div class="card" style="padding: 1rem; text-align: center; grid-column: span 2;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">SHA-256 CHECKSUM</div>
+          <div style="font-size: 0.95rem; font-family: var(--font-mono); font-weight: 600; color: var(--text-primary); word-break: break-all; margin-top: 0.25rem;">
+            {{ res.sha256 }}
+          </div>
+        </div>
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">INTEGRITY STATUS</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #047857;">{{ res.integrity_status }}</div>
+        </div>
+      {% elif res.compliance_status is defined %}
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">COMPLIANCE STATUS</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: {% if res.compliance_status == 'Compliant' %}#047857{% else %}#b91c1c{% endif %};">
+            {{ res.compliance_status }}
+          </div>
+        </div>
+        <div class="card" style="padding: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PII FLAGGED</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: {% if res.pii_detected %}#b91c1c{% else %}#047857{% endif %};">
+            {{ 'YES' if res.pii_detected else 'NONE' }}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- Raw Formatted Output Box -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Structured Execution Payload (JSON)</h2>
+      <span style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
+        Completed: {{ job.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC') if job.completed_at else 'In progress' }}
+      </span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <pre class="code-block" style="border-radius: 0; margin: 0;">{{ job.result or '{}' }}</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

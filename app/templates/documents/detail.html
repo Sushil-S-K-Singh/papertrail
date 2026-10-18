@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }}{% endblock %}
+
+{% block content %}
+<div class="document-detail-page">
+  <!-- Top Navigation & Action Header -->
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('documents.list_documents') }}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Documents</a>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+          {{ doc.title }}
+        </h1>
+        {% if doc.status == 'approved' %}
+          <span class="badge badge-approved" style="font-size: 0.85rem;">Approved</span>
+        {% elif doc.status == 'pending_review' %}
+          <span class="badge badge-pending" style="font-size: 0.85rem;">Pending Review</span>
+        {% elif doc.status == 'rejected' %}
+          <span class="badge badge-rejected" style="font-size: 0.85rem;">Rejected</span>
+        {% else %}
+          <span class="badge badge-draft" style="font-size: 0.85rem;">Draft</span>
+        {% endif %}
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.875rem;">
+        Document ID: <code>#{{ doc.id }}</code> &bull;
+        Category: <strong>{{ doc.category }}</strong> &bull;
+        Owner: <strong>{{ doc.owner.username }}</strong> &bull;
+        Created: {{ doc.created_at.strftime('%Y-%m-%d %H:%M UTC') if doc.created_at else '' }}
+      </p>
+    </div>
+
+    <!-- Contextual Actions -->
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      {% if can_edit %}
+        <a href="{{ url_for('documents.edit_document', id=doc.id) }}" class="btn btn-secondary">
+          ✏️ Edit Document
+        </a>
+      {% endif %}
+
+      {% if can_submit and doc.status != 'pending_review' %}
+        <form action="{{ url_for('documents.submit_document', id=doc.id) }}" method="POST" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary">
+            🚀 Submit for Review
+          </button>
+        </form>
+      {% endif %}
+
+      {% if can_process %}
+        <form action="{{ url_for('processing.create_job') }}" method="POST" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="document_id" value="{{ doc.id }}">
+          <input type="hidden" name="job_type" value="document_analysis">
+          <button type="submit" class="btn btn-secondary">
+            ⚙️ Run Analysis
+          </button>
+        </form>
+      {% endif %}
+
+      {% if can_delete %}
+        <form action="{{ url_for('documents.delete_document', id=doc.id) }}" method="POST" style="display:inline;" data-confirm="Are you sure you want to permanently delete this draft?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-danger">
+            Delete
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Review Decision Panel (If current user is reviewer/admin and status is pending) -->
+  {% if can_review %}
+    <div class="card" style="border-left: 4px solid #f59e0b; margin-bottom: 2rem;">
+      <div class="card-header" style="background-color: #fffbeb;">
+        <h3 class="card-title" style="color: #92400e;">Reviewer Decision Action</h3>
+        <span class="badge badge-pending">Action Required</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          As an authorized reviewer, inspect this document and provide a formal approval or rejection decision.
+        </p>
+        <form action="{{ url_for('reviews.decide_review', id=doc.id) }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-group">
+            <label for="review-comments" class="form-label">Reviewer Comments / Justification</label>
+            <textarea
+              id="review-comments"
+              name="comments"
+              class="form-control"
+              style="min-height: 80px;"
+              placeholder="State rationale, compliance findings, or required revisions..."
+            ></textarea>
+          </div>
+          <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" name="decision" value="approved" class="btn btn-success">
+              ✓ Approve Document
+            </button>
+            <button type="submit" name="decision" value="rejected" class="btn btn-danger">
+              ✕ Reject Document
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Document View Grid: Content vs Sidebar Information -->
+  <div class="document-view-grid">
+    <!-- Left: Content Body -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Document Content</h2>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">
+          Last updated: {{ doc.updated_at.strftime('%Y-%m-%d %H:%M') if doc.updated_at else '' }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="doc-content-box">{{ doc.content }}</div>
+      </div>
+    </div>
+
+    <!-- Right: Approvals History & Audit Timeline -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Approval Decision History -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" style="font-size: 1rem;">Approval History</h3>
+        </div>
+        <div class="card-body" style="padding: 1.25rem;">
+          {% if doc.approvals %}
+            <ul class="timeline">
+              {% for appr in doc.approvals %}
+                <li class="timeline-item">
+                  <div class="timeline-dot {% if appr.decision == 'approved' %}dot-approved{% else %}dot-rejected{% endif %}"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span><strong>{{ appr.reviewer.username }}</strong></span>
+                      <span>{{ appr.created_at.strftime('%Y-%m-%d %H:%M') if appr.created_at else '' }}</span>
+                    </div>
+                    <div style="margin-bottom: 0.35rem;">
+                      {% if appr.decision == 'approved' %}
+                        <span class="badge badge-approved">Approved</span>
+                      {% else %}
+                        <span class="badge badge-rejected">Rejected</span>
+                      {% endif %}
+                    </div>
+                    {% if appr.comments %}
+                      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; font-style: italic;">
+                        "{{ appr.comments }}"
+                      </p>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              No reviews have been recorded for this document yet.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Document Jobs Link -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" style="font-size: 1rem;">Processing Jobs</h3>
+          <a href="{{ url_for('processing.list_jobs') }}" style="font-size: 0.8rem;">All jobs &rarr;</a>
+        </div>
+        <div class="card-body" style="padding: 1rem 1.25rem;">
+          {% if doc.jobs %}
+            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem;">
+              {% for job in doc.jobs %}
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <a href="{{ url_for('processing.view_job', id=job.id) }}" style="font-weight: 600;">
+                      Job #{{ job.id }}
+                    </a>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">{{ job.job_type }}</div>
+                  </div>
+                  <div>
+                    {% if job.status == 'completed' %}
+                      <span class="badge badge-approved" style="font-size: 0.7rem;">Completed</span>
+                    {% elif job.status == 'failed' %}
+                      <span class="badge badge-rejected" style="font-size: 0.7rem;">Failed</span>
+                    {% else %}
+                      <span class="badge badge-pending" style="font-size: 0.7rem;">{{ job.status }}</span>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              No processing jobs executed on this document.
+            </p>
+            {% if can_process %}
+              <form action="{{ url_for('processing.create_job') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="document_id" value="{{ doc.id }}">
+                <input type="hidden" name="job_type" value="compliance_audit">
+                <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">
+                  Run Compliance Scan
+                </button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Relevant Audit Trail -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" style="font-size: 1rem;">Document Audit Trail</h3>
+        </div>
+        <div class="card-body" style="padding: 1rem 1.25rem;">
+          {% if audit_events %}
+            <ul class="timeline">
+              {% for ev in audit_events %}
+                <li class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span>{{ ev.actor.username if ev.actor else 'System' }}</span>
+                      <span>{{ ev.created_at.strftime('%m-%d %H:%M') if ev.created_at else '' }}</span>
+                    </div>
+                    <div class="timeline-title" style="font-size: 0.8rem;">
+                      {{ ev.event_type }}
+                    </div>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted);">No audit events logged.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

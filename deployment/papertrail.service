@@ -1,0 +1,20 @@
+[Unit]
+Description=PaperTrail Enterprise Document Approval Portal
+After=network.target
+
+[Service]
+Type=simple
+User=papertrail
+Group=papertrail
+WorkingDirectory=/opt/papertrail
+Environment="PATH=/opt/papertrail/.venv/bin:/usr/local/bin:/usr/bin"
+Environment="FLASK_ENV=production"
+Environment="PYTHONPATH=/opt/papertrail"
+ExecStart=/opt/papertrail/.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

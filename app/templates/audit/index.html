@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trail{% endblock %}
+
+{% block content %}
+<div class="audit-page">
+  <!-- Page Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+        Enterprise Audit Trail
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.925rem;">
+        Cryptographically stamped activity logs tracking authentications, document state transitions, and reviewer decisions.
+      </p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body" style="padding: 1.25rem;">
+      <form method="GET" action="{{ url_for('audit.list_audits') }}" class="toolbar" style="margin-bottom: 0;">
+        <div class="filter-bar">
+          <!-- Event Type Filter -->
+          <div>
+            <select name="event_type" class="form-select" onchange="this.form.submit()">
+              <option value="">All Event Types</option>
+              {% for ev in available_event_types %}
+                <option value="{{ ev }}" {% if selected_event_type == ev %}selected{% endif %}>{{ ev }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Object Type Filter -->
+          <div>
+            <select name="object_type" class="form-select" onchange="this.form.submit()">
+              <option value="">All Object Types</option>
+              <option value="document" {% if selected_object_type == 'document' %}selected{% endif %}>Documents</option>
+              <option value="user" {% if selected_object_type == 'user' %}selected{% endif %}>Users</option>
+              <option value="job" {% if selected_object_type == 'job' %}selected{% endif %}>Processing Jobs</option>
+            </select>
+          </div>
+
+          <!-- Quick Text Search -->
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="quick-table-search" class="form-control" placeholder="Quick filter in logs...">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-secondary btn-sm">Apply Filters</button>
+          {% if selected_event_type or selected_object_type %}
+            <a href="{{ url_for('audit.list_audits') }}" class="btn btn-secondary btn-sm" style="color: var(--text-muted);">Reset</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Audit Log Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Event Records</h2>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Showing recent entries (max 100)</span>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+      {% if events %}
+        <div class="table-responsive" style="border: none; border-radius: 0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Event ID</th>
+                <th>Timestamp (UTC)</th>
+                <th>Actor</th>
+                <th>Event Type</th>
+                <th>Target Object</th>
+                <th>Metadata Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ev in events %}
+                <tr>
+                  <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">#{{ ev.id }}</td>
+                  <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
+                    {{ ev.created_at.strftime('%Y-%m-%d %H:%M:%S') if ev.created_at else '' }}
+                  </td>
+                  <td>
+                    {% if ev.actor %}
+                      <strong>{{ ev.actor.username }}</strong>
+                      <span class="badge badge-role-{{ ev.actor.role }}" style="font-size: 0.65rem;">{{ ev.actor.role }}</span>
+                    {% else %}
+                      <span style="color: var(--text-muted); font-style: italic;">System/Anon</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge" style="font-family: var(--font-mono); font-size: 0.75rem; text-transform: none;
+                      {% if 'login_failure' in ev.event_type %}background:#fef2f2; color:#b91c1c; border-color:#fecaca;
+                      {% elif 'login_success' in ev.event_type %}background:#eff6ff; color:#1e40af; border-color:#bfdbfe;
+                      {% elif 'approve' in ev.event_type %}background:#ecfdf5; color:#047857; border-color:#a7f3d0;
+                      {% elif 'reject' in ev.event_type %}background:#fff1f2; color:#be123c; border-color:#fecdd3;
+                      {% else %}background:#f1f5f9; color:#334155; border-color:#cbd5e1;{% endif %}">
+                      {{ ev.event_type }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if ev.object_type %}
+                      <span style="font-weight: 500;">{{ ev.object_type }}</span>
+                      {% if ev.object_id %}
+                        {% if ev.object_type == 'document' %}
+                          <a href="{{ url_for('documents.view_document', id=ev.object_id) }}">#{{ ev.object_id }}</a>
+                        {% elif ev.object_type == 'job' %}
+                          <a href="{{ url_for('processing.view_job', id=ev.object_id) }}">#{{ ev.object_id }}</a>
+                        {% else %}
+                          #{{ ev.object_id }}
+                        {% endif %}
+                      {% endif %}
+                    {% else %}
+                      <span style="color: var(--text-muted);">&mdash;</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-secondary); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {% if ev.details %}
+                      {{ ev.metadata_json }}
+                    {% else %}
+                      <span style="color: var(--text-muted);">&mdash;</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">🛡️</div>
+          <h3 class="empty-state-title">No audit records found</h3>
+          <p class="empty-state-description">No events matched the chosen filter parameters.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

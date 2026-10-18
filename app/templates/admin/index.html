@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}System Administration{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <!-- Page Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+          Administration Center
+        </h1>
+        <span class="badge badge-role-admin">SYSTEM GOVERNANCE</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.925rem;">
+        Manage enterprise users, role permissions, review telemetry, and audit compliance logs.
+      </p>
+    </div>
+    <div>
+      <a href="{{ url_for('audit.list_audits') }}" class="btn btn-secondary">
+        🛡️ Complete Audit Trail
+      </a>
+    </div>
+  </div>
+
+  <!-- Challenge Mode & Security Posture Banner -->
+  <div class="card" style="margin-bottom: 2rem; border-left: 4px solid {% if challenge_mode %}#9333ea{% else %}#2563eb{% endif %};">
+    <div class="card-header" style="background-color: {% if challenge_mode %}#faf5ff{% else %}#eff6ff{% endif %};">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <h2 class="card-title" style="color: {% if challenge_mode %}#6b21a8{% else %}#1e40af{% endif %}; font-size: 1.05rem;">
+          {% if challenge_mode %}
+            Cybersecurity Challenge Evaluation Mode: ACTIVE
+          {% else %}
+            Enterprise Platform Security Baseline: ENFORCED
+          {% endif %}
+        </h2>
+        <span class="badge {% if challenge_mode %}badge-role-admin{% else %}badge-approved{% endif %}">
+          {{ 'CHALLENGE ACTIVE' if challenge_mode else 'COMPLIANT' }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if challenge_mode %}
+        <div style="background-color: #f3e8ff; border: 1px solid #d8b4fe; border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1rem;">
+          <strong style="color: #6b21a8; font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">
+            🏆 Administrator Challenge Proof Token:
+          </strong>
+          <code style="font-size: 1.1rem; font-weight: 700; color: #581c87; user-select: all; background: #fff; padding: 0.25rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid #d8b4fe; display: inline-block;">
+            {{ challenge_flag }}
+          </code>
+          <p style="font-size: 0.8rem; color: #6b21a8; margin-top: 0.5rem; margin-bottom: 0;">
+            This token certifies that unprivileged access was successfully escalated to administrative governance.
+          </p>
+        </div>
+      {% endif %}
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.85rem;">
+        <div style="background: var(--bg-surface-alt); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <span style="color: var(--text-muted); display: block;">Session Security</span>
+          <strong style="color: #047857;">✓ HttpOnly + SameSite=Lax</strong>
+        </div>
+        <div style="background: var(--bg-surface-alt); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <span style="color: var(--text-muted); display: block;">CSRF Protection</span>
+          <strong style="color: #047857;">✓ Synchronizer Token Pattern</strong>
+        </div>
+        <div style="background: var(--bg-surface-alt); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <span style="color: var(--text-muted); display: block;">Credential Storage</span>
+          <strong style="color: #047857;">✓ Werkzeug PBKDF2/Scrypt Hash</strong>
+        </div>
+        <div style="background: var(--bg-surface-alt); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+          <span style="color: var(--text-muted); display: block;">Database Integrity</span>
+          <strong style="color: #047857;">✓ SQLite Parameterized Queries</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metric Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Total Users</span>
+      </div>
+      <div class="stat-value" style="color: #6b21a8;">{{ stats.total_users }}</div>
+      <div class="stat-desc">Provisioned accounts</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Total Documents</span>
+      </div>
+      <div class="stat-value" style="color: var(--primary);">{{ stats.total_documents }}</div>
+      <div class="stat-desc">Across all categories</div>
+    </div>
+
+    <div class="stat-card stat-pending">
+      <div class="stat-card-header">
+        <span class="stat-label">Pending Reviews</span>
+      </div>
+      <div class="stat-value" style="color: #b45309;">{{ stats.pending_reviews }}</div>
+      <div class="stat-desc">Awaiting decision</div>
+    </div>
+
+    <div class="stat-card stat-approved">
+      <div class="stat-card-header">
+        <span class="stat-label">Total Approvals</span>
+      </div>
+      <div class="stat-value" style="color: #047857;">{{ stats.total_approvals }}</div>
+      <div class="stat-desc">Decisions recorded</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Processing Jobs</span>
+      </div>
+      <div class="stat-value" style="color: #0284c7;">{{ stats.total_jobs }}</div>
+      <div class="stat-desc">{{ stats.completed_jobs }} completed &bull; {{ stats.failed_jobs }} failed</div>
+    </div>
+  </div>
+
+  <!-- User Management Table -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+      <h2 class="card-title">User Accounts & Role Permissions</h2>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">{{ users|length }} active directory records</span>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive" style="border: none; border-radius: 0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th style="text-align: right;">Role Management</th>
+              <th style="text-align: right;">Status Toggle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">#{{ u.id }}</td>
+                <td>
+                  <strong>{{ u.username }}</strong>
+                  {% if u.id == current_user.id %}
+                    <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">(You)</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge badge-role-{{ u.role }}">{{ u.role }}</span>
+                </td>
+                <td>
+                  {% if u.active %}
+                    <span class="badge badge-approved">Active</span>
+                  {% else %}
+                    <span class="badge badge-rejected">Suspended</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">
+                  {{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '' }}
+                </td>
+                <td style="text-align: right;">
+                  {% if u.id != current_user.id %}
+                    <form action="{{ url_for('admin.change_user_role', id=u.id) }}" method="POST" style="display: inline-flex; gap: 0.4rem; align-items: center;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <select name="role" class="form-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; width: auto;">
+                        <option value="employee" {% if u.role == 'employee' %}selected{% endif %}>Employee</option>
+                        <option value="reviewer" {% if u.role == 'reviewer' %}selected{% endif %}>Reviewer</option>
+                        <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                      </select>
+                      <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+                    </form>
+                  {% else %}
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Self (Protected)</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right;">
+                  {% if u.id != current_user.id %}
+                    <form action="{{ url_for('admin.toggle_user_active', id=u.id) }}" method="POST" style="display:inline;" data-confirm="Are you sure you want to change activation status for {{ u.username }}?">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn {% if u.active %}btn-outline-danger{% else %}btn-success{% endif %} btn-sm">
+                        {{ 'Deactivate' if u.active else 'Activate' }}
+                      </button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent System Audit Activity -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent System-Wide Audit Activity</h2>
+      <a href="{{ url_for('audit.list_audits') }}" class="btn btn-secondary btn-sm">View Full Log</a>
+    </div>
+
+    <div class="card-body" style="padding: 0;">
+      <div class="table-responsive" style="border: none; border-radius: 0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Actor</th>
+              <th>Event Type</th>
+              <th>Target Object</th>
+              <th>Timestamp (UTC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ev in recent_audits %}
+              <tr>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">#{{ ev.id }}</td>
+                <td><strong>{{ ev.actor.username if ev.actor else 'System/Anonymous' }}</strong></td>
+                <td><code>{{ ev.event_type }}</code></td>
+                <td>
+                  {{ ev.object_type or 'None' }}
+                  {% if ev.object_id %}
+                    #{{ ev.object_id }}
+                  {% endif %}
+                </td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">
+                  {{ ev.created_at.strftime('%Y-%m-%d %H:%M:%S') if ev.created_at else '' }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

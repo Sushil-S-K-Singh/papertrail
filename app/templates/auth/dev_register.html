@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Create Development Account{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 3rem auto;">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Development Account Registration</h2>
+      <span class="badge badge-role-employee">DEV ENVIRONMENT</span>
+    </div>
+
+    <div class="card-body">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Create a testing persona to explore different permission workflows (Employee drafting or Reviewer queues).
+      </p>
+
+      <form action="{{ url_for('auth.dev_register') }}" method="POST" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+          <label for="username" class="form-label">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-control"
+            value="{{ username or '' }}"
+            placeholder="e.g. dev_tester"
+            required
+          >
+          <div class="form-text">3-32 characters; letters, numbers, and underscores.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="role" class="form-label">Account Role</label>
+          <select id="role" name="role" class="form-select">
+            <option value="employee" {% if role == 'employee' %}selected{% endif %}>Employee (Can draft and submit documents)</option>
+            <option value="reviewer" {% if role == 'reviewer' %}selected{% endif %}>Reviewer (Can review, approve, and reject submissions)</option>
+          </select>
+          <div class="form-text">Administrator roles cannot be registered through this public interface.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-password-wrapper">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-control"
+              placeholder="Minimum 8 characters"
+              required
+            >
+            <button type="button" class="password-toggle-btn" data-target="password">Show</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password" class="form-label">Confirm Password</label>
+          <div class="input-password-wrapper">
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              class="form-control"
+              placeholder="Re-enter password"
+              required
+            >
+            <button type="button" class="password-toggle-btn" data-target="confirm_password">Show</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+          Create Test Account
+        </button>
+      </form>
+    </div>
+
+    <div class="card-footer" style="justify-content: center; font-size: 0.85rem;">
+      <a href="{{ url_for('auth.login') }}">Back to Sign In</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to PaperTrail{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+  <!-- Hero Section -->
+  <section class="landing-hero">
+    <div class="hero-badge">Enterprise Document Management & Workflow Governance</div>
+    <h1 class="hero-title">Transparent, Secure Document Approvals for the Modern Enterprise</h1>
+    <p class="hero-subtitle">
+      PaperTrail streamlines proposal drafting, multi-tier managerial reviews, automated content integrity analysis, and immutable audit logs in a centralized, secure platform.
+    </p>
+    <div class="hero-cta-group">
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg">Open Dashboard</a>
+        <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary btn-lg">View Documents</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">Sign In to Portal</a>
+        <a href="#features" class="btn btn-secondary btn-lg">Explore Platform</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Visual Dashboard Preview Card -->
+  <section class="dashboard-preview-card">
+    <div class="preview-browser-bar">
+      <span class="dot dot-red"></span>
+      <span class="dot dot-yellow"></span>
+      <span class="dot dot-green"></span>
+      <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem; font-family: var(--font-mono);">
+        https://papertrail.corp.internal/dashboard
+      </span>
+    </div>
+    <div style="background-color: var(--bg-surface-alt); border-radius: var(--radius-md); padding: 1.5rem; border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <div>
+          <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.2rem;">PaperTrail Operational Dashboard</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time governance telemetry and document pipeline status</p>
+        </div>
+        <span class="badge badge-role-admin">ACTIVE TELEMETRY</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: #fff; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ACTIVE DOCUMENTS</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">24</div>
+        </div>
+        <div style="background: #fff; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PENDING REVIEW</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #b45309;">4</div>
+        </div>
+        <div style="background: #fff; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">APPROVED</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #047857;">18</div>
+        </div>
+        <div style="background: #fff; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">AUDIT INTEGRITY</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: #6b21a8;">100%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Cards -->
+  <section id="features" class="landing-features">
+    <div class="section-header">
+      <h2 class="section-title">Built for Enterprise Compliance & Workflow Velocity</h2>
+      <p class="section-subtitle">A cohesive set of tools designed to satisfy stringent regulatory compliance standards.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">📄</div>
+        <h3 class="feature-title">Document Tracking</h3>
+        <p class="feature-desc">
+          Organize policy proposals, corporate budgets, contracts, and engineering specifications with category tagging and strict version boundaries.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">⚖️</div>
+        <h3 class="feature-title">Role-Based Approvals</h3>
+        <p class="feature-desc">
+          Designated reviewers and executive stakeholders inspect submissions with granular approval comments and decisive rejection guardrails.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">⚙️</div>
+        <h3 class="feature-title">Local Processing Jobs</h3>
+        <p class="feature-desc">
+          Execute bounded local background checks including SHA-256 integrity hashing, readability indices, PII pattern detection, and sanitization masks.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">🛡️</div>
+        <h3 class="feature-title">Immutable Auditability</h3>
+        <p class="feature-desc">
+          Every login, document creation, managerial decision, and configuration alteration is recorded with actor identifiers and precise UTC timestamps.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workflow Section -->
+  <section id="workflow" class="landing-workflow">
+    <div class="section-header">
+      <h2 class="section-title">The Four-Stage Approval Lifecycle</h2>
+      <p class="section-subtitle">How proposals journey from conception to certified enterprise standards.</p>
+    </div>
+
+    <div class="workflow-grid">
+      <div class="workflow-step">
+        <div class="step-num">1</div>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">Draft Creation</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          Employees draft documents in safe sandbox drafts with live word counts and category classifications.
+        </p>
+      </div>
+
+      <div class="workflow-step">
+        <div class="step-num">2</div>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">Formal Submission</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          The document is locked against uncoordinated edits and routed to the reviewers' dedicated queue.
+        </p>
+      </div>
+
+      <div class="workflow-step">
+        <div class="step-num">3</div>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">Peer Review</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          Qualified reviewers assess compliance, leaving transparent comments and recording irrevocable decisions.
+        </p>
+      </div>
+
+      <div class="workflow-step">
+        <div class="step-num">4</div>
+        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem;">Automated Verification</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          Automated processing generates cryptographic hashes and compliance logs ready for administrative auditing.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

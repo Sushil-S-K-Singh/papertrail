@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Document Management{% endblock %}
+
+{% block content %}
+<div class="documents-page">
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+        Enterprise Documents
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.925rem;">
+        Browse, manage, and submit enterprise documents and policy proposals.
+      </p>
+    </div>
+    <div>
+      <a href="{{ url_for('documents.create_document') }}" class="btn btn-primary">
+        + Create Document
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body" style="padding: 1.25rem;">
+      <form method="GET" action="{{ url_for('documents.list_documents') }}" class="toolbar" style="margin-bottom: 0;">
+        <div class="filter-bar">
+          <!-- Search Input -->
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              name="q"
+              class="form-control"
+              placeholder="Search documents by title..."
+              value="{{ q or '' }}"
+            >
+          </div>
+
+          <!-- Status Dropdown -->
+          <div>
+            <select name="status" class="form-select" onchange="this.form.submit()">
+              <option value="">All Statuses</option>
+              <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Drafts</option>
+              <option value="pending_review" {% if selected_status == 'pending_review' %}selected{% endif %}>Pending Review</option>
+              <option value="approved" {% if selected_status == 'approved' %}selected{% endif %}>Approved</option>
+              <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+          </div>
+
+          <!-- Category Dropdown -->
+          <div>
+            <select name="category" class="form-select" onchange="this.form.submit()">
+              <option value="">All Categories</option>
+              {% for cat in categories %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Sort Dropdown -->
+          <div>
+            <select name="sort" class="form-select" onchange="this.form.submit()">
+              <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Newest First</option>
+              <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+              <option value="title_asc" {% if selected_sort == 'title_asc' %}selected{% endif %}>Title (A-Z)</option>
+              <option value="title_desc" {% if selected_sort == 'title_desc' %}selected{% endif %}>Title (Z-A)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+          {% if q or selected_status or selected_category or (selected_sort and selected_sort != 'newest') %}
+            <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary btn-sm" style="color: var(--text-muted);">Reset</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Documents Table -->
+  <div class="card">
+    <div class="card-body" style="padding: 0;">
+      {% if documents %}
+        <div class="table-responsive" style="border: none; border-radius: 0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in documents %}
+                <tr>
+                  <td style="font-family: var(--font-mono); color: var(--text-muted); font-size: 0.8rem;">#{{ doc.id }}</td>
+                  <td>
+                    <a href="{{ url_for('documents.view_document', id=doc.id) }}" style="font-weight: 600;">
+                      {{ doc.title }}
+                    </a>
+                  </td>
+                  <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ doc.category }}</span></td>
+                  <td>{{ doc.owner.username }}</td>
+                  <td>
+                    {% if doc.status == 'approved' %}
+                      <span class="badge badge-approved">Approved</span>
+                    {% elif doc.status == 'pending_review' %}
+                      <span class="badge badge-pending">Pending Review</span>
+                    {% elif doc.status == 'rejected' %}
+                      <span class="badge badge-rejected">Rejected</span>
+                    {% else %}
+                      <span class="badge badge-draft">Draft</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size: 0.8rem; color: var(--text-muted);">
+                    {{ doc.updated_at.strftime('%Y-%m-%d %H:%M') if doc.updated_at else '' }}
+                  </td>
+                  <td style="text-align: right;">
+                    <div style="display: inline-flex; gap: 0.4rem;">
+                      <a href="{{ url_for('documents.view_document', id=doc.id) }}" class="btn btn-secondary btn-sm">
+                        View
+                      </a>
+                      {% if doc.can_edit(current_user) %}
+                        <a href="{{ url_for('documents.edit_document', id=doc.id) }}" class="btn btn-secondary btn-sm">
+                          Edit
+                        </a>
+                      {% endif %}
+                      {% if doc.can_submit(current_user) and doc.status != 'pending_review' %}
+                        <form action="{{ url_for('documents.submit_document', id=doc.id) }}" method="POST" style="display:inline;">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button type="submit" class="btn btn-primary btn-sm">Submit</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📄</div>
+          <h3 class="empty-state-title">No documents found</h3>
+          <p class="empty-state-description">
+            {% if q or selected_status or selected_category %}
+              No documents matched your search filter criteria. Try clearing filters.
+            {% else %}
+              You don't have any documents registered yet. Start by creating your first draft.
+            {% endif %}
+          </p>
+          <a href="{{ url_for('documents.create_document') }}" class="btn btn-primary btn-sm">+ Create Document</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

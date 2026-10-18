@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Create Document{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('documents.list_documents') }}" style="font-size: 0.85rem; color: var(--text-muted);">&larr; Back to Documents</a>
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-top: 0.5rem;">
+      New Enterprise Document
+    </h1>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+      Draft a formal policy, technical proposal, or operational addendum.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form action="{{ url_for('documents.create_document') }}" method="POST" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+          <label for="title" class="form-label">Document Title</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            class="form-control"
+            value="{{ title or '' }}"
+            placeholder="e.g. Q3 Infrastructure Modernization Proposal"
+            required
+            maxlength="200"
+          >
+          <div class="form-text">Concise, descriptive title for regulatory classification.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="category" class="form-label">Category</label>
+          <select id="category" name="category" class="form-select">
+            {% for cat in categories %}
+              <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <label for="document-content" class="form-label" style="margin-bottom: 0;">Document Content</label>
+            <span id="editor-live-stats" style="font-size: 0.8rem; color: var(--text-muted);">0 words</span>
+          </div>
+          <textarea
+            id="document-content"
+            name="content"
+            class="form-control"
+            style="min-height: 240px;"
+            placeholder="Draft the body of your proposal or policy here..."
+            required
+          >{{ content or '' }}</textarea>
+          <div class="form-text">Markdown or plaintext formatted document body.</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem;">
+          <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" name="action" value="save_draft" class="btn btn-secondary">
+            Save as Draft
+          </button>
+          <button type="submit" name="action" value="submit_review" class="btn btn-primary">
+            Submit for Review
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

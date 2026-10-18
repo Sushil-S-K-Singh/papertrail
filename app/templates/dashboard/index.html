@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+  <!-- Page Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+        Welcome, {{ current_user.username }}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        {% if current_user.is_admin %}
+          System Administrator Overview & Platform Telemetry
+        {% elif current_user.is_reviewer %}
+          Reviewer Dashboard & Document Verification Hub
+        {% else %}
+          Employee Document Workspace & Approval Tracking
+        {% endif %}
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('documents.create_document') }}" class="btn btn-primary">
+        + New Document
+      </a>
+      {% if current_user.is_reviewer or current_user.is_admin %}
+        <a href="{{ url_for('reviews.review_queue') }}" class="btn btn-secondary">
+          Review Queue ({{ stats.pending }})
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Metric Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Accessible Documents</span>
+      </div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-desc">Total across current scope</div>
+    </div>
+
+    <div class="stat-card stat-pending">
+      <div class="stat-card-header">
+        <span class="stat-label">Pending Review</span>
+      </div>
+      <div class="stat-value" style="color: #b45309;">{{ stats.pending }}</div>
+      <div class="stat-desc">Awaiting decision</div>
+    </div>
+
+    <div class="stat-card stat-approved">
+      <div class="stat-card-header">
+        <span class="stat-label">Approved</span>
+      </div>
+      <div class="stat-value" style="color: #047857;">{{ stats.approved }}</div>
+      <div class="stat-desc">Formal approvals granted</div>
+    </div>
+
+    <div class="stat-card stat-rejected">
+      <div class="stat-card-header">
+        <span class="stat-label">Rejected</span>
+      </div>
+      <div class="stat-value" style="color: #b91c1c;">{{ stats.rejected }}</div>
+      <div class="stat-desc">Changes requested / denied</div>
+    </div>
+
+    {% if current_user.is_admin %}
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-label">Active Users</span>
+        </div>
+        <div class="stat-value" style="color: #6b21a8;">{{ stats.users }}</div>
+        <div class="stat-desc">Provisioned accounts</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Status Distribution Visual Bar -->
+  {% set total_docs = stats.total %}
+  <div class="dist-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Document Pipeline Distribution</h3>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">{{ total_docs }} total items</span>
+    </div>
+
+    <div class="dist-bar-wrapper">
+      <div class="dist-bar">
+        {% if total_docs > 0 %}
+          <div class="dist-segment seg-approved" style="width: {{ (stats.approved / total_docs * 100)|round(1) }}%;"></div>
+          <div class="dist-segment seg-pending" style="width: {{ (stats.pending / total_docs * 100)|round(1) }}%;"></div>
+          <div class="dist-segment seg-draft" style="width: {{ (stats.draft / total_docs * 100)|round(1) }}%;"></div>
+          <div class="dist-segment seg-rejected" style="width: {{ (stats.rejected / total_docs * 100)|round(1) }}%;"></div>
+        {% else %}
+          <div class="dist-segment" style="width: 100%; background: #e2e8f0;"></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="dist-legend">
+      <div class="dist-legend-item">
+        <span class="dist-dot" style="background: #10b981;"></span>
+        <span>Approved ({{ stats.approved }})</span>
+      </div>
+      <div class="dist-legend-item">
+        <span class="dist-dot" style="background: #f59e0b;"></span>
+        <span>Pending Review ({{ stats.pending }})</span>
+      </div>
+      <div class="dist-legend-item">
+        <span class="dist-dot" style="background: #64748b;"></span>
+        <span>Drafts ({{ stats.draft }})</span>
+      </div>
+      <div class="dist-legend-item">
+        <span class="dist-dot" style="background: #ef4444;"></span>
+        <span>Rejected ({{ stats.rejected }})</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-Column Grid: Recent Documents & Activity / Quick Actions -->
+  <div class="dashboard-grid">
+    <!-- Left: Recent Documents -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Recent Document Activity</h2>
+        <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary btn-sm">View All</a>
+      </div>
+
+      <div class="card-body" style="padding: 0;">
+        {% if recent_docs %}
+          <div class="table-responsive" style="border: none; border-radius: 0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Owner</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Last Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for doc in recent_docs %}
+                  <tr>
+                    <td>
+                      <a href="{{ url_for('documents.view_document', id=doc.id) }}" style="font-weight: 600;">
+                        {{ doc.title }}
+                      </a>
+                    </td>
+                    <td>{{ doc.owner.username }}</td>
+                    <td><span class="badge" style="background: #f1f5f9; color: #475569;">{{ doc.category }}</span></td>
+                    <td>
+                      {% if doc.status == 'approved' %}
+                        <span class="badge badge-approved">Approved</span>
+                      {% elif doc.status == 'pending_review' %}
+                        <span class="badge badge-pending">Pending Review</span>
+                      {% elif doc.status == 'rejected' %}
+                        <span class="badge badge-rejected">Rejected</span>
+                      {% else %}
+                        <span class="badge badge-draft">Draft</span>
+                      {% endif %}
+                    </td>
+                    <td style="color: var(--text-muted); font-size: 0.8rem;">
+                      {{ doc.updated_at.strftime('%Y-%m-%d %H:%M') if doc.updated_at else '' }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <p class="empty-state-description">No documents found in your current workspace scope.</p>
+            <a href="{{ url_for('documents.create_document') }}" class="btn btn-primary btn-sm">+ Create First Document</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right: Quick Actions & Recent Audits -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Quick Actions</h2>
+        </div>
+        <div class="card-body">
+          <div class="quick-actions-list">
+            <a href="{{ url_for('documents.create_document') }}" class="quick-action-btn">
+              <span>📝 Draft New Document</span>
+              <span>&rarr;</span>
+            </a>
+            <a href="{{ url_for('documents.list_documents') }}" class="quick-action-btn">
+              <span>📂 Browse All Documents</span>
+              <span>&rarr;</span>
+            </a>
+            {% if current_user.is_reviewer or current_user.is_admin %}
+              <a href="{{ url_for('reviews.review_queue') }}" class="quick-action-btn">
+                <span>⚖️ Open Review Queue</span>
+                <span>&rarr;</span>
+              </a>
+            {% endif %}
+            <a href="{{ url_for('processing.list_jobs') }}" class="quick-action-btn">
+              <span>⚙️ Run Processing Job</span>
+              <span>&rarr;</span>
+            </a>
+            <a href="{{ url_for('audit.list_audits') }}" class="quick-action-btn">
+              <span>🛡️ Inspect Audit Trail</span>
+              <span>&rarr;</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Audit Events -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Audit Log</h2>
+          <a href="{{ url_for('audit.list_audits') }}" style="font-size: 0.8rem;">All logs &rarr;</a>
+        </div>
+        <div class="card-body" style="padding: 1rem 1.25rem;">
+          {% if recent_audits %}
+            <ul class="timeline">
+              {% for ev in recent_audits %}
+                <li class="timeline-item">
+                  <div class="timeline-dot {% if 'approve' in ev.event_type %}dot-approved{% elif 'reject' in ev.event_type %}dot-rejected{% elif 'submit' in ev.event_type %}dot-pending{% endif %}"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span>{{ ev.actor.username if ev.actor else 'System' }}</span>
+                      <span>{{ ev.created_at.strftime('%m-%d %H:%M') if ev.created_at else '' }}</span>
+                    </div>
+                    <div class="timeline-title" style="font-size: 0.85rem;">
+                      {{ ev.event_type }}
+                      {% if ev.object_id %}
+                        #{{ ev.object_id }}
+                      {% endif %}
+                    </div>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="color: var(--text-muted); font-size: 0.85rem;">No recent audit activity.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
