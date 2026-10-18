@@ -24,6 +24,9 @@ class Config:
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600 * 24
     
+    # Test-persona registration is opt-in outside automated tests.
+    ALLOW_DEV_REGISTRATION = os.environ.get("PAPERTRAIL_ALLOW_DEV_REGISTRATION", "false").lower() in ("true", "1")
+    
     # Challenge Mode indicator (for cybersecurity lab evaluation)
     CHALLENGE_MODE = os.environ.get("PAPERTRAIL_CHALLENGE_MODE", "false").lower() in ("true", "1")
     CHALLENGE_FLAG = os.environ.get("PAPERTRAIL_CHALLENGE_FLAG", "FLAG{papertrail_enterprise_workflow_audit_passed_2026}")
