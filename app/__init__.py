@@ -17,6 +17,13 @@ def create_app(config_name: str = None) -> Flask:
     cfg_class = config_by_name.get(config_name, config_by_name["default"])
     app.config.from_object(cfg_class)
 
+    # Production must never start with the public development fallback secret.
+    if config_name == "production":
+        production_secret = os.environ.get("SECRET_KEY")
+        if not production_secret or len(production_secret) < 32:
+            raise RuntimeError("Production requires SECRET_KEY to be set to a random value of at least 32 characters.")
+        app.config["SECRET_KEY"] = production_secret
+
     # Ensure instance directory exists
     instance_path = Path(app.instance_path)
     instance_path.mkdir(parents=True, exist_ok=True)
