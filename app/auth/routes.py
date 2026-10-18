@@ -1,4 +1,4 @@
-from flask import flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from app.auth import auth_bp
 from app.extensions import db
@@ -81,7 +81,9 @@ def logout():
 
 @auth_bp.route("/dev-register", methods=["GET", "POST"])
 def dev_register():
-    """Development-only registration for test accounts."""
+    """Development-only registration for test accounts; disabled unless explicitly enabled."""
+    if not (current_app.config.get("TESTING") or current_app.config.get("ALLOW_DEV_REGISTRATION", False)):
+        abort(404)
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
